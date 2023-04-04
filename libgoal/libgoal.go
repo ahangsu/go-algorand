@@ -1284,7 +1284,7 @@ func (c *Client) SimulateRawTransaction(data []byte) (result v2.PreEncodedSimula
 	return
 }
 
-// SimulateRawTransaction simulates a transaction group and returns relevant simulation results.
+// SimulateTransactionGroup simulates a transaction group and returns relevant simulation results.
 func (c *Client) SimulateTransactionGroup(txgroup []transactions.SignedTxn) (result v2.PreEncodedSimulateResponse, err error) {
 	var enc []byte
 	for _, tx := range txgroup {
