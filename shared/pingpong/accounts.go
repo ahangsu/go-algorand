@@ -472,29 +472,10 @@ func signAndBroadcastTransaction(senderAccount *pingPongAccount, tx transactions
 	return
 }
 
-func genBigNoOpAndBigHashes(numOps uint32, numHashes uint32, hashSize string) []byte {
-	var progParts []string
-	progParts = append(progParts, `#pragma version 2`)
-	progParts = append(progParts, `byte base64 AA==`)
-
-	for i := uint32(0); i < numHashes; i++ {
-		progParts = append(progParts, hashSize)
-	}
-	for i := uint32(0); i < numOps/2; i++ {
-		progParts = append(progParts, `int 1`)
-		progParts = append(progParts, `pop`)
-	}
-	progParts = append(progParts, `int 1`)
-	progParts = append(progParts, `return`)
-	progAsm := strings.Join(progParts, "\n")
-	ops, err := logic.AssembleString(progAsm)
-	if err != nil {
-		panic(err)
-	}
-	return ops.Program
-}
-
-func genAppProgram(numOps uint32, numHashes uint32, hashSize string, numGlobalKeys, numLocalKeys, numBoxUpdate, numBoxRead uint32) ([]byte, string) {
+// genAppProgram generates program assembly byte code and program's TEAL source code from input arguments:
+// 1. if one of `numBoxUpdate` or `numBoxRead` is non-zero, then this method generates *ONLY* box-related program
+// 2. otherwise, generate program based on `numOps`, `numHashes`, `hashOpCode`, `numGlobalKeys`, `numLocalKeys`
+func genAppProgram(numOps uint32, numHashes uint32, hashOpCode string, numGlobalKeys, numLocalKeys, numBoxUpdate, numBoxRead uint32) ([]byte, string) {
 	if numBoxUpdate != 0 || numBoxRead != 0 {
 		prologue := `#pragma version 8
 			txn ApplicationID
@@ -664,7 +645,7 @@ func genAppProgram(numOps uint32, numHashes uint32, hashSize string, numGlobalKe
 	if numHashes > 0 {
 		progParts = append(progParts, `byte base64 AA==`)
 		for i := uint32(0); i < numHashes; i++ {
-			progParts = append(progParts, hashSize)
+			progParts = append(progParts, hashOpCode)
 		}
 	}
 	written := prologueSize + flipBranchSize + numHashes + numGlobalKeys*writeBlockSize + numLocalKeys*writeLocBlockSize
