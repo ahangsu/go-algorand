@@ -1138,14 +1138,6 @@ func (au *appOptInUpdate) apply(pps *WorkerState) {
 	pps.cinfo.OptIns[au.aidx] = uniqueAppend(pps.cinfo.OptIns[au.aidx], au.addr)
 }
 
-type nopUpdate struct {
-}
-
-func (au *nopUpdate) apply(pps *WorkerState) {
-}
-
-var nopUpdateSingleton = &nopUpdate{}
-
 type assetUpdate struct {
 	from string
 	to   string
@@ -1283,7 +1275,7 @@ func (pps *WorkerState) constructNFTGenTxn(from, to string, fee uint64, client *
 
 	}
 	var meta [32]byte
-	rand.Read(meta[:])
+	crypto.RandBytes(meta[:])
 	assetName := pps.nftSpamAssetName()
 	const totalSupply = 1
 	txn, err = client.MakeUnsignedAssetCreateTx(totalSupply, false, sender, sender, sender, sender, "ping", assetName, "", meta[:], 0)
