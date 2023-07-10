@@ -69,6 +69,7 @@ func server(port string) error {
 	log.Println("Started server at", listener.Addr())
 
 	shutdownChannel = make(chan bool, 1)
+	defer func() { close(shutdownChannel) }()
 
 	for {
 		conn, err := listener.Accept()
@@ -84,7 +85,7 @@ func server(port string) error {
 		case <-shutdownChannel:
 			continue
 		default:
-			_ = <-shutdownChannel
+			<-shutdownChannel
 			return nil
 		}
 	}
