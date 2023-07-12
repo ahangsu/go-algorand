@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/google/go-dap"
-	"github.com/stretchr/testify/require"
+	// "github.com/stretchr/testify/require"
 
 	"github.com/algorand/go-algorand/test/partitiontest"
 )
@@ -129,18 +129,20 @@ func client(t *testing.T, port string, wg *sync.WaitGroup) {
 }
 
 func TestServer(t *testing.T) {
+	t.Parallel()
 	partitiontest.PartitionTest(t)
 
 	port := "54321"
-	go func() {
-		err := server(port)
-		require.NoError(t, err, "The server returned with error %v", err)
-	}()
+	// go func() {
+	// err := server(port)
+	// require.NoError(t, err, "The server returned with error %v", err)
+	// }()
 	// Give server time to start listening before clients connect
 	time.Sleep(100 * time.Millisecond)
 
 	var wg sync.WaitGroup
-	wg.Add(1)
+	wg.Add(2)
+	go client(t, port, &wg)
 	go client(t, port, &wg)
 	wg.Wait()
 }

@@ -46,6 +46,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -55,7 +56,15 @@ import (
 	"github.com/google/go-dap"
 )
 
-var shutdownChannel chan bool
+type Server struct {
+	listener net.Listener
+}
+
+var shutdownChannel chan struct{}
+
+func init() {
+	shutdownChannel = make(chan struct{}, 1)
+}
 
 // server starts a server that listens on a specified port
 // and blocks indefinitely. This server can accept multiple
@@ -68,9 +77,7 @@ func server(port string) error {
 	defer listener.Close()
 	log.Println("Started server at", listener.Addr())
 
-	shutdownChannel = make(chan bool, 1)
-	defer func() { close(shutdownChannel) }()
-
+outer:
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -83,12 +90,13 @@ func server(port string) error {
 
 		select {
 		case <-shutdownChannel:
-			continue
+			log.Println("closing shutdown channel")
+			break outer
 		default:
-			<-shutdownChannel
-			return nil
 		}
 	}
+	close(shutdownChannel)
+	return nil
 }
 
 // handleConnection handles a connection from a single client.
@@ -109,14 +117,18 @@ func handleConnection(conn net.Conn) {
 		err := debugSession.handleRequest()
 		// TODO(polina): check for connection vs decoding error?
 		if err != nil {
+			var protocolError *dap.BaseProtocolError
 			if err == io.EOF {
 				log.Println("No more data to read:", err)
 				break
+			} else if errors.As(err, &protocolError) {
+				// TODO protocol error, should probably carry over in the loop
+			} else {
+				// There maybe more messages to process, but
+				// we will start with the strict behavior of only accepting
+				// expected inputs.
+				log.Fatal("Server error: ", err)
 			}
-			// There maybe more messages to process, but
-			// we will start with the strict behavior of only accepting
-			// expected inputs.
-			log.Fatal("Server error: ", err)
 		}
 	}
 
@@ -392,14 +404,14 @@ func (ds *DebugSession) onAttachRequest(request *dap.AttachRequest) {
 }
 
 func (ds *DebugSession) onDisconnectRequest(request *dap.DisconnectRequest) {
-	shutdownChannel <- true
+	shutdownChannel <- struct{}{}
 	response := &dap.DisconnectResponse{}
 	response.Response = *newResponse(request.Seq, request.Command)
 	ds.send(response)
 }
 
 func (ds *DebugSession) onTerminateRequest(request *dap.TerminateRequest) {
-	shutdownChannel <- true
+	shutdownChannel <- struct{}{}
 	ds.send(newErrorResponse(request.Seq, request.Command, "TerminateRequest is not yet supported"))
 }
 
