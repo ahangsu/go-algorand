@@ -17,16 +17,19 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"runtime"
 	"strconv"
+	"syscall"
 
 	"github.com/spf13/cobra"
 )
 
 var debuggerPort uint64
 var simulationResultFileName string
+var txnGroupRootJsonFile string
 
 /* =========================================================================== *
  * DISCUSSION ON PASSING INFO WHEN STARTING DA SERVER (ISSUE #5554)            *
@@ -146,8 +149,6 @@ var simulationResultFileName string
  *    then proceed on tagging (src, srcmap) to TEAL-info with same hashes.     *
  * ========================================================================== */
 
-var txnGroupRootJsonFile string
-
 func init() {
 	rootCmd.PersistentFlags().Uint64Var(
 		&debuggerPort, "port", 54321, "Debugger port to listen to")
@@ -159,20 +160,64 @@ func init() {
 		"Transaction root level application related specification file")
 }
 
+// waitForTermination is a blocking function that waits for either
+// a SIGINT (Ctrl-C) or SIGTERM (kill -15) OS signal or for disconnectChan
+// to be closed by the server when the client disconnects.
+// Note that in headless mode, the debugged process is foregrounded
+// (to have control of the tty for debugging interactive programs),
+// so SIGINT gets sent to the debuggee and not to delve.
+func waitForTermination(disconnectChan chan struct{}) {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	if runtime.GOOS == "windows" {
+		// On windows Ctrl-C sent to inferior process is delivered
+		// as SIGINT to delve. Ignore it instead of stopping the server
+		// in order to be able to debug signal handlers.
+		go func() {
+			for range ch {
+			}
+		}()
+		<-disconnectChan
+	} else {
+		select {
+		case <-ch:
+		case <-disconnectChan:
+		}
+	}
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "tealdap",
 	Short: "Algorand TEAL Debugger (supporting Debug Adapter Protocol)",
 	Long:  `Debug a ...`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("start debugging")
+		log.Println("start debugging")
+		log.Println("DAP server pid = ", os.Getpid())
+
+		// NOTE: the current implementation handles only one connection to
+		// a single editor: it won't make too much sense to support multiple
+		// client connection at the same time on a same port.
+		config := &ServerConfig{
+			Port:             strconv.FormatUint(debuggerPort, 10),
+			TerminateChannel: make(chan struct{}),
+		}
+		defer close(config.TerminateChannel)
+
+		// new a dap server here
+		dapServer, err := NewServer(config)
+		if err != nil {
+			log.Fatalf("debugger server initialization error: %s", err.Error())
+		}
+
 		// TODO haven't start server yet, was thinking of testing:
 		// how to bring up the server for testing, and bring down after the test
+		dapServer.Start()
+		defer dapServer.Stop()
 
-		if err := server(strconv.FormatUint(debuggerPort, 10)); err != nil {
-			log.Fatalf("debug error: %s", err.Error())
-		}
-		// I suppose once we run `launch`, namely dap.LaunchResponse,
-		// the server just run all the way to end (if we let through all the stop points).
+		// When Start() runs, the go routine handling the request might send
+		// to terminate channel, and thus unblock the main routine, thus exit
+		waitForTermination(config.TerminateChannel)
+		log.Println("DAP server exit")
 	},
 }
 

@@ -56,9 +56,49 @@ import (
 	"github.com/google/go-dap"
 )
 
-// TODO
-type Server struct {
+type ServerConfig struct {
+	Port             string
+	TerminateChannel chan struct{}
+}
+
+type Session struct{}
+
+type DebugAdapterServer struct {
 	listener net.Listener
+	Config   *ServerConfig
+
+	session   *Session
+	sessionMu sync.Mutex
+}
+
+type DebugAdapterServerInterface interface {
+	Start()
+	Stop()
+}
+
+func NewServer(config *ServerConfig) (*DebugAdapterServer, error) {
+	listener, err := net.Listen("tcp", ":"+config.Port)
+	if err != nil {
+		return nil, err
+	}
+	return &DebugAdapterServer{
+		listener: listener,
+		Config:   config,
+	}, nil
+}
+
+func (d *DebugAdapterServer) Start() {
+	go func() {
+		// new a session
+		// and run the session
+	}()
+}
+
+func (d *DebugAdapterServer) Stop() {
+	log.Println("DAP server is stopping...")
+	defer log.Println("DAP server is stopped")
+
+	d.listener.Close()
 }
 
 var shutdownChannel chan struct{}
