@@ -148,18 +148,15 @@ var simulationResultFileName string
 
 var txnGroupRootJsonFile string
 
-// Should be a map of a hash of something (e.g., program bytes) to app-id pair with sourcemap?
-// TODO we should decide the input format here
-
 func init() {
 	rootCmd.PersistentFlags().Uint64Var(
 		&debuggerPort, "port", 54321, "Debugger port to listen to")
 	rootCmd.PersistentFlags().StringVar(
 		&simulationResultFileName, "simulation-trace-file", "",
 		"Simulate trace file to start debug session")
-	//rootCmd.PersistentFlags().StringArrayVar(
-	//	&sourcemapFileNamesAndAppIDs, "sourcemap-file", nil,
-	//	"Sourcemap file name together with appIDs with this sourcemap")
+	rootCmd.PersistentFlags().StringVarP(
+		&txnGroupRootJsonFile, "txn-root-file", "t", "",
+		"Transaction root level application related specification file")
 }
 
 var rootCmd = &cobra.Command{
