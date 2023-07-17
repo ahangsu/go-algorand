@@ -61,7 +61,22 @@ type ServerConfig struct {
 	TerminateChannel chan struct{}
 }
 
-type Session struct{}
+type Session struct {
+	// rw is used to read requests and write events/responses
+	rw *bufio.ReadWriter
+
+	// sendQueue is used to capture messages from multiple request
+	// processing goroutines while writing them to the client connection
+	// from a single goroutine via sendFromQueue. We must keep track of
+	// the multiple channel senders with a wait group to make sure we do
+	// not close this channel prematurely. Closing this channel will signal
+	// the sendFromQueue goroutine that it can exit.
+	sendQueue chan dap.Message
+	sendWg    sync.WaitGroup
+
+	// stopDebug is used to notify long-running handlers to stop processing.
+	stopDebug chan struct{}
+}
 
 type DebugAdapterServer struct {
 	listener net.Listener
@@ -89,8 +104,17 @@ func NewServer(config *ServerConfig) (*DebugAdapterServer, error) {
 
 func (d *DebugAdapterServer) Start() {
 	go func() {
-		// new a session
-		// and run the session
+		for {
+			conn, err := d.listener.Accept()
+			if err != nil {
+				log.Printf("DAP: connection failed by %s", err.Error())
+				continue
+			}
+			defer conn.Close()
+			log.Println("Started server at", d.listener.Addr())
+
+			// TODO run the session
+		}
 	}()
 }
 

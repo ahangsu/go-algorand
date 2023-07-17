@@ -147,13 +147,26 @@ var txnGroupRootJsonFile string
  * 3. Finally, we merge the 2 maps from above (trace file and editor side).    *
  *    Merge the TEAL-info at root level, namely full (src, srcmap, hash),      *
  *    then proceed on tagging (src, srcmap) to TEAL-info with same hashes.     *
+ *                                                                             *
+ * A follow up question: how to handle the app creation or update?             *
+ * Both approval/clear-state programs should be taken care of during solution  *
+ * step 1, no matter what on completion.                                       *
+ * The simulation endpoint should be responsible to grab the updates and       *
+ * creations during the transaction group.                                     *
+ * The advantage of doing so is: though app-id and OC may be the same,         *
+ * distinct positions in txn group guarantee the distinction of map keys.      *
+ *                                                                             *
+ * Additionally, app-id should the *final* app-id, rather than the ones in the *
+ * transaction, for during app-creation time, app-id in txn is 0,              *
+ * but a successful app creation should lead to a valid app-id,                *
+ * while a failure in app creation won't make sense to provide a valid app-id. *
  * ========================================================================== */
 
 func init() {
 	rootCmd.PersistentFlags().Uint64Var(
 		&debuggerPort, "port", 54321, "Debugger port to listen to")
-	rootCmd.PersistentFlags().StringVar(
-		&simulationResultFileName, "simulation-trace-file", "",
+	rootCmd.PersistentFlags().StringVarP(
+		&simulationResultFileName, "simulation-trace-file", "s", "",
 		"Simulate trace file to start debug session")
 	rootCmd.PersistentFlags().StringVarP(
 		&txnGroupRootJsonFile, "txn-root-file", "t", "",
@@ -209,8 +222,6 @@ var rootCmd = &cobra.Command{
 			log.Fatalf("debugger server initialization error: %s", err.Error())
 		}
 
-		// TODO haven't start server yet, was thinking of testing:
-		// how to bring up the server for testing, and bring down after the test
 		dapServer.Start()
 		defer dapServer.Stop()
 
