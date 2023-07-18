@@ -74,16 +74,15 @@ type Session struct {
 	sendQueue chan dap.Message
 	sendWg    sync.WaitGroup
 
-	// stopDebug is used to notify long-running handlers to stop processing.
-	stopDebug chan struct{}
+	// stopDebug is used to notify long-running handlers to stop stopDebug.
+	processing chan struct{}
 }
 
 type DebugAdapterServer struct {
 	listener net.Listener
 	Config   *ServerConfig
 
-	session   *Session
-	sessionMu sync.Mutex
+	connectionWg sync.WaitGroup
 }
 
 type DebugAdapterServerInterface interface {
@@ -113,7 +112,9 @@ func (d *DebugAdapterServer) Start() {
 			defer conn.Close()
 			log.Println("Started server at", d.listener.Addr())
 
-			// TODO run the session
+			// TODO run the session, should have a wait group
+			// to wait for all process stop
+			go handleConnection(conn)
 		}
 	}()
 }
@@ -174,6 +175,7 @@ func handleConnection(conn net.Conn) {
 		rw:        bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
 		sendQueue: make(chan dap.Message),
 		stopDebug: make(chan struct{}),
+		server:    nil,
 	}
 	go debugSession.sendFromQueue()
 
@@ -327,9 +329,7 @@ func (ds *DebugSession) dispatchRequest(request dap.Message) {
 // a message to be sent to client. This is called by per-request
 // goroutines to send events and responses for each request and
 // to notify of events triggered by the fake debugger.
-func (ds *DebugSession) send(message dap.Message) {
-	ds.sendQueue <- message
-}
+func (ds *DebugSession) send(message dap.Message) { ds.sendQueue <- message }
 
 // sendFromQueue is to be run in a separate goroutine to listen on a
 // channel for messages to send back to the client. It will
@@ -370,6 +370,8 @@ type DebugSession struct {
 	// session is yet to stop at before the program terminates.
 	bpSet    int
 	bpSetMux sync.Mutex
+
+	server *DebugAdapterServerInterface
 }
 
 // doContinue allows fake program execution to continue when the program
@@ -469,15 +471,15 @@ func (ds *DebugSession) onAttachRequest(request *dap.AttachRequest) {
 }
 
 func (ds *DebugSession) onDisconnectRequest(request *dap.DisconnectRequest) {
-	shutdownChannel <- struct{}{}
 	response := &dap.DisconnectResponse{}
 	response.Response = *newResponse(request.Seq, request.Command)
 	ds.send(response)
+	shutdownChannel <- struct{}{}
 }
 
 func (ds *DebugSession) onTerminateRequest(request *dap.TerminateRequest) {
-	shutdownChannel <- struct{}{}
 	ds.send(newErrorResponse(request.Seq, request.Command, "TerminateRequest is not yet supported"))
+	shutdownChannel <- struct{}{}
 }
 
 func (ds *DebugSession) onRestartRequest(request *dap.RestartRequest) {

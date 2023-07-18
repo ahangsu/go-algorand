@@ -212,7 +212,7 @@ var rootCmd = &cobra.Command{
 		// client connection at the same time on a same port.
 		config := &ServerConfig{
 			Port:             strconv.FormatUint(debuggerPort, 10),
-			TerminateChannel: make(chan struct{}),
+			TerminateChannel: make(chan struct{}, 1),
 		}
 		defer close(config.TerminateChannel)
 
