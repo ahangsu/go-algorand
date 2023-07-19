@@ -37,7 +37,7 @@ var txnGroupRootJsonFile string
  * ============                                                                *
  * # Motivation                                                                *
  * ============                                                                *
- * When we kick start the DA server, we want to feed info to the server:       *
+ * When we kick-start the DA server, we want to feed info to the server:       *
  * 1. Simulation trace file that includes execution trace through txn group.   *
  * 2. (Available) Sourcemaps and TEAL sources that are tied to the executed    *
  *    apps/logic-sigs in this transaction group.                               *
@@ -222,8 +222,8 @@ var rootCmd = &cobra.Command{
 			log.Fatalf("debugger server initialization error: %s", err.Error())
 		}
 
-		dapServer.Start()
-		defer dapServer.Stop()
+		dapServer.DAStartServing()
+		defer dapServer.DAStartServing()
 
 		// When Start() runs, the go routine handling the request might send
 		// to terminate channel, and thus unblock the main routine, thus exit
@@ -231,11 +231,6 @@ var rootCmd = &cobra.Command{
 		log.Println("DAP server exit")
 	},
 }
-
-// TODO should consider a few inputs
-// - sourcemap (together with source?)
-// - app-id(s) tied to the source map
-// - simulation result?
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {

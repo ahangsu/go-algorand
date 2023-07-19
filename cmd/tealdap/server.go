@@ -86,8 +86,8 @@ type DebugAdapterServer struct {
 }
 
 type DebugAdapterServerInterface interface {
-	Start()
-	Stop()
+	DAStartServing()
+	DAStopServing()
 }
 
 func NewServer(config *ServerConfig) (*DebugAdapterServer, error) {
@@ -101,7 +101,7 @@ func NewServer(config *ServerConfig) (*DebugAdapterServer, error) {
 	}, nil
 }
 
-func (d *DebugAdapterServer) Start() {
+func (d *DebugAdapterServer) DAStartServing() {
 	go func() {
 		for {
 			conn, err := d.listener.Accept()
@@ -119,7 +119,7 @@ func (d *DebugAdapterServer) Start() {
 	}()
 }
 
-func (d *DebugAdapterServer) Stop() {
+func (d *DebugAdapterServer) DAStopServing() {
 	log.Println("DAP server is stopping...")
 	defer log.Println("DAP server is stopped")
 
