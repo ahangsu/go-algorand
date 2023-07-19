@@ -16,6 +16,58 @@
 
 package main
 
+/*
+ * main-routine
+ * |
+ * | server.DAStartServing()
+ * |     connectionWG sync.WaitGroup
+ * |     serverShut chan struct (len 1)
+ * |
+ * |     for loop spawning goroutines for handling connections <--------------------------+
+ * |                                                                                      |
+ * |     on conn, err := listener.Accept(); err == nil (if err abort, Accept is blocking) |
+ * |                                                                                      |
+ * *----> handleConnection(conn)                                                          |
+ * |      |     connectionWG.Add(1)                                                       |
+ * |      |     defer connectionWG.Done()                                                 |
+ * |      |                                                                               |
+ * |      |     requestWG sync.WaitGroup                                                  |
+ * |      |     termRequest chan struct (len 1)                                           |
+ * |      |     defer func() {                                                            |
+ * |      |         if len(termRequest) > 0:                                              |
+ * |      |             no block write to serverShut                                      |
+ * |      |      }                                                                        |
+ * |      |                                                                               |
+ * |      |     for loop spawning goroutines for handling requests <---+                  |
+ * |      |                                                            |                  |
+ * |      *----> handleRequest(req)                                    |                  |
+ * |      |      |     requestWG.Add(1)                                |                  |
+ * |      |      |     defer requestWG.Done()                          |                  |
+ * |      |      |                                                     |                  |
+ * |      |      |     sendWG sync.WaitGroup                           |                  |
+ * |      |      |                                                     |                  |
+ * |      |      |     ***HANDLE REQUEST DOES ITS OWN THING ...***     |                  |
+ * |      |      |                                                     |                  |
+ * |      |      |     if terminate related request:                   |                  |
+ * |      |      |         non-block write to termRequest              |                  |
+ * |      |      |     sendWG.wait()                                   |                  |
+ * |      |      |                                                     |                  |
+ * |      x <----* handleRequest goroutine end here                    |                  |
+ * |      |                                                            |                  |
+ * |      |     if len(serverShut) > 0 or read from conn EOF:          |                  |
+ * |      |         requestWG.Wait()                                   |                  |
+ * |      |         break the spawning for-loop for handling requests  |                  |
+ * |      ? -----------------------------------------------------------+                  |
+ * x <----* handleConnection goroutine end here                                           |
+ * |                                                                                      |
+ * |     if len(serverShut) > 0:                                                          |
+ * |         connectionWG.Wait()                                                          |
+ * |         break the spawning for-loop for handling connections                         |
+ * ? -------------------------------------------------------------------------------------+
+ * |
+ * o server.DAStopServing(), clean things up
+ */
+
 type ServerConfig struct {
 	Port             string
 	TerminateChannel chan struct{}
