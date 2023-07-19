@@ -69,8 +69,8 @@ package main
  */
 
 type ServerConfig struct {
-	Port             string
-	TerminateChannel chan struct{}
+	Port       string
+	ServerShut chan struct{}
 }
 
 type DebugAdapterServerInterface interface {

@@ -211,10 +211,10 @@ var rootCmd = &cobra.Command{
 		// a single editor: it won't make too much sense to support multiple
 		// client connection at the same time on a same port.
 		config := &ServerConfig{
-			Port:             strconv.FormatUint(debuggerPort, 10),
-			TerminateChannel: make(chan struct{}, 1),
+			Port:       strconv.FormatUint(debuggerPort, 10),
+			ServerShut: make(chan struct{}, 1),
 		}
-		defer close(config.TerminateChannel)
+		defer close(config.ServerShut)
 
 		// new a dap server here
 		dapServer, err := NewServer(config)
@@ -222,12 +222,11 @@ var rootCmd = &cobra.Command{
 			log.Fatalf("debugger server initialization error: %s", err.Error())
 		}
 
-		dapServer.DAStartServing()
-		defer dapServer.DAStartServing()
+		go dapServer.OSTerminateHandle()
 
-		// When Start() runs, the go routine handling the request might send
-		// to terminate channel, and thus unblock the main routine, thus exit
-		waitForTermination(config.TerminateChannel)
+		dapServer.DAStartServing()
+		defer dapServer.DAStopServing()
+
 		log.Println("DAP server exit")
 	},
 }
