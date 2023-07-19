@@ -20,7 +20,15 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/algorand/go-algorand/daemon/algod/api/server/v2"
+	"github.com/algorand/go-algorand/protocol"
 )
+
+func parseSimulateResponse(respBytes []byte) (resp v2.PreEncodedSimulateResponse, err error) {
+	err = protocol.DecodeReflect(respBytes, &resp)
+	return
+}
 
 // TerminateServer is a non-block write to ServerShut channel to signal other
 // goroutines that the server is shutting down.  If the channel is already
