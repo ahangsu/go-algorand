@@ -19,6 +19,12 @@ package main
 import "github.com/google/go-dap"
 
 /*
+   2 assumptions for simplification:
+   1. only one client
+   2. request sent one at a time.
+*/
+
+/*
  * main-routine
  * |
  * | server.DAStartServing()
@@ -86,7 +92,7 @@ type DebugAdapterClientServerConnectionInterface interface {
 }
 
 type RequestHandlerInterface interface {
-	OnRequest(dap.Message)
+	dispatchRequest(dap.Message)
 	onInitializeRequest(*dap.InitializeRequest)
 	onLaunchRequest(*dap.LaunchRequest)
 	onDisconnectRequest(*dap.DisconnectRequest)
