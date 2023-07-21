@@ -77,7 +77,7 @@ type DebugAdapterServer struct {
 	listener net.Listener
 	Config   *ServerConfig
 
-	connectionWg sync.WaitGroup
+	ConnectionWg *sync.WaitGroup
 }
 
 func NewServer(config *ServerConfig) (*DebugAdapterServer, error) {
@@ -86,9 +86,38 @@ func NewServer(config *ServerConfig) (*DebugAdapterServer, error) {
 		return nil, err
 	}
 	return &DebugAdapterServer{
-		listener: listener,
-		Config:   config,
+		listener:     listener,
+		Config:       config,
+		ConnectionWg: new(sync.WaitGroup),
 	}, nil
+}
+
+type DebugAdapterClientServerConnection struct {
+	Server        *DebugAdapterServer
+	RequestWG     *sync.WaitGroup
+	TerminateChan chan struct{}
+}
+
+func NewDebugAdapterClientServerConnection(server *DebugAdapterServer) *DebugAdapterClientServerConnection {
+	return &DebugAdapterClientServerConnection{
+		Server:        server,
+		RequestWG:     new(sync.WaitGroup),
+		TerminateChan: make(chan struct{}, 1),
+	}
+}
+
+type RequestHandler struct {
+	Connection *DebugAdapterClientServerConnection
+	MessageWG  *sync.WaitGroup
+	sendQueue  chan dap.Message
+}
+
+func MakeRequestHandler(connection *DebugAdapterClientServerConnection) *RequestHandler {
+	return &RequestHandler{
+		Connection: connection,
+		MessageWG:  new(sync.WaitGroup),
+		sendQueue:  make(chan dap.Message),
+	}
 }
 
 func (d *DebugAdapterServer) DAStartServing() {
@@ -209,23 +238,6 @@ func (ds *DebugSession) handleRequest() error {
 		ds.sendWg.Done()
 	}()
 	return nil
-}
-
-// TEALDAServerInterface abstract out the server behavior for dispatching
-// each viable request.  We define such interface to introduce multiple
-// implementations, including real runtime of DA and mock DA for testing.
-type TEALDAServerInterface interface {
-	onInitializeRequest(*dap.InitializeRequest)
-	onLaunchRequest(*dap.LaunchRequest)
-	onDisconnectRequest(*dap.DisconnectRequest)
-	onTerminateRequest(*dap.TerminateRequest)
-	onSetBreakpointsRequest(*dap.SetBreakpointsRequest)
-	onConfigurationDoneRequest(*dap.ConfigurationDoneRequest)
-	onContinueRequest(*dap.ContinueRequest)
-	onNextRequest(*dap.NextRequest)
-	onVariablesRequest(*dap.VariablesRequest)
-	onCancelRequest(*dap.CancelRequest)
-	onBreakpointLocationsRequest(*dap.BreakpointLocationsRequest)
 }
 
 // dispatchRequest launches a new goroutine to process each request
@@ -656,36 +668,4 @@ func (ds *DebugSession) onCancelRequest(request *dap.CancelRequest) {
 
 func (ds *DebugSession) onBreakpointLocationsRequest(request *dap.BreakpointLocationsRequest) {
 	ds.send(newErrorResponse(request.Seq, request.Command, "BreakpointLocationsRequest is not yet supported"))
-}
-
-func newEvent(event string) *dap.Event {
-	return &dap.Event{
-		ProtocolMessage: dap.ProtocolMessage{
-			Seq:  0,
-			Type: "event",
-		},
-		Event: event,
-	}
-}
-
-func newResponse(requestSeq int, command string) *dap.Response {
-	return &dap.Response{
-		ProtocolMessage: dap.ProtocolMessage{
-			Seq:  0,
-			Type: "response",
-		},
-		Command:    command,
-		RequestSeq: requestSeq,
-		Success:    true,
-	}
-}
-
-func newErrorResponse(requestSeq int, command string, message string) *dap.ErrorResponse {
-	er := &dap.ErrorResponse{}
-	er.Response = *newResponse(requestSeq, command)
-	er.Success = false
-	er.Message = "unsupported"
-	er.Body.Error.Format = message
-	er.Body.Error.Id = 12345
-	return er
 }

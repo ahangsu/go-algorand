@@ -16,6 +16,8 @@
 
 package main
 
+import "github.com/google/go-dap"
+
 /*
  * main-routine
  * |
@@ -76,4 +78,21 @@ type ServerConfig struct {
 type DebugAdapterServerInterface interface {
 	DAStartServing()
 	DAStopServing()
+}
+
+// TDAPInterface abstract out the server behavior for dispatching
+// each viable request.  We define such interface to introduce multiple
+// implementations, including real runtime of DA and mock DA for testing.
+type TDAPInterface interface {
+	onInitializeRequest(*dap.InitializeRequest)
+	onLaunchRequest(*dap.LaunchRequest)
+	onDisconnectRequest(*dap.DisconnectRequest)
+	onTerminateRequest(*dap.TerminateRequest)
+	onSetBreakpointsRequest(*dap.SetBreakpointsRequest)
+	onConfigurationDoneRequest(*dap.ConfigurationDoneRequest)
+	onContinueRequest(*dap.ContinueRequest)
+	onNextRequest(*dap.NextRequest)
+	onVariablesRequest(*dap.VariablesRequest)
+	onCancelRequest(*dap.CancelRequest)
+	onBreakpointLocationsRequest(*dap.BreakpointLocationsRequest)
 }
