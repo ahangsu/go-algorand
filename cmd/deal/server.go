@@ -80,6 +80,15 @@ type DebugAdapterServerInterface interface {
 	DAStopServing()
 }
 
+type DebugAdapterClientServerConnectionInterface interface {
+	ConnectionBegin()
+	ConnectionEnd()
+}
+
+type RequestHandlerInterface interface {
+	OnRequest(dap.Message)
+}
+
 // TDAPInterface abstract out the server behavior for dispatching
 // each viable request.  We define such interface to introduce multiple
 // implementations, including real runtime of DA and mock DA for testing.
