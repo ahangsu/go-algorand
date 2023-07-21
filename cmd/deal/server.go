@@ -87,12 +87,6 @@ type DebugAdapterClientServerConnectionInterface interface {
 
 type RequestHandlerInterface interface {
 	OnRequest(dap.Message)
-}
-
-// TDAPInterface abstract out the server behavior for dispatching
-// each viable request.  We define such interface to introduce multiple
-// implementations, including real runtime of DA and mock DA for testing.
-type TDAPInterface interface {
 	onInitializeRequest(*dap.InitializeRequest)
 	onLaunchRequest(*dap.LaunchRequest)
 	onDisconnectRequest(*dap.DisconnectRequest)
