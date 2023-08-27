@@ -245,6 +245,10 @@ func (s *Server) Initialize(cfg config.Local, phonebookAddresses []string, genes
 		return fmt.Errorf("couldn't initialize the node: %s", err)
 	}
 	s.node = serverNode
+
+	// When a caller to logging uses Fatal, we want to stop the node before os.Exit is called.
+	logging.RegisterExitHandler(s.Stop)
+
 	return nil
 }
 
@@ -286,10 +290,15 @@ func (s *Server) Start() {
 		s.metricServiceStarted = true
 	}
 
-	apiToken, err := tokens.GetAndValidateAPIToken(s.RootPath, tokens.AlgodTokenFilename)
-	if err != nil {
-		fmt.Printf("APIToken error: %v\n", err)
-		os.Exit(1)
+	var apiToken string
+	var err error
+	fmt.Printf("API authentication disabled: %v\n", cfg.DisableAPIAuth)
+	if !cfg.DisableAPIAuth {
+		apiToken, err = tokens.GetAndValidateAPIToken(s.RootPath, tokens.AlgodTokenFilename)
+		if err != nil {
+			fmt.Printf("APIToken error: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	adminAPIToken, err := tokens.GetAndValidateAPIToken(s.RootPath, tokens.AlgodAdminTokenFilename)
