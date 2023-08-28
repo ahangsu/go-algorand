@@ -27,9 +27,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var debuggerPort uint64
-var simulationResultFileName string
-var txnGroupRootJsonFile string
+var (
+	debuggerPort             uint64
+	simulationResultFileName string
+	txnGroupRootJsonFile     string
+	projectRootAbsPath       string
+)
 
 func init() {
 	rootCmd.PersistentFlags().Uint64Var(
@@ -40,6 +43,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(
 		&txnGroupRootJsonFile, "txn-root-file", "t", "",
 		"Transaction root level application related specification file")
+	rootCmd.PersistentFlags().StringVarP(
+		&projectRootAbsPath, "root-path", "r", "",
+		"Path to the root of transaction group project")
 }
 
 // waitForTermination is a blocking function that waits for either

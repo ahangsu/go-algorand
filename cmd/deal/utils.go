@@ -19,17 +19,17 @@ package main
 import (
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/google/go-dap"
-
-	"github.com/algorand/go-algorand/daemon/algod/api/server/v2"
-	"github.com/algorand/go-algorand/protocol"
 )
 
-func parseSimulateResponse(respBytes []byte) (resp v2.PreEncodedSimulateResponse, err error) {
-	err = protocol.DecodeReflect(respBytes, &resp)
-	return
+func toAbsoluteFilePath(path, rootPath string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(rootPath, path)
 }
 
 // TerminateServer is a non-block write to ServerShut channel to signal other
