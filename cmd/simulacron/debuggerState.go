@@ -101,7 +101,6 @@ func (txnGSrc HashToSource) TEALPathToDigest(path string) crypto.Digest {
 // system by txnJsonPath path to an TxnGroupDescriptionJSON instance, and
 // returns HashToSource (and error).
 func MakeHashToSource(txnJsonPath string) (hashToSource HashToSource, err error) {
-	// NOTE: we make the assumption that this txnJsonPath is absolute path.
 	txnJsonPath = toAbsoluteFilePath(txnJsonPath, projectRootAbsPath)
 	fileBytes, err := os.ReadFile(txnJsonPath)
 	if err != nil {
