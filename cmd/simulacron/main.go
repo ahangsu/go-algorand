@@ -17,9 +17,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"syscall"
@@ -36,16 +38,16 @@ var (
 
 func init() {
 	rootCmd.PersistentFlags().Uint64Var(
-		&debuggerPort, "port", 54321, "Debugger port to listen to")
+		&debuggerPort, "port", 0xdab, "Debugger port to listen to.")
 	rootCmd.PersistentFlags().StringVarP(
-		&simulationResultFileName, "simulation-trace-file", "s", "",
-		"Simulate trace file to start debug session")
+		&simulationResultFileName, "simulate-response", "s", "",
+		"Simulate response containing execution trace to start debug session.")
 	rootCmd.PersistentFlags().StringVarP(
 		&txnGroupRootJsonFile, "txn-root-file", "t", "",
-		"Transaction root level application related specification file")
+		"Transaction root level application related specification file.")
 	rootCmd.PersistentFlags().StringVarP(
 		&projectRootAbsPath, "root-path", "r", "",
-		"Path to the root of transaction group project")
+		"Path to the root of transaction group project.")
 }
 
 // waitForTermination is a blocking function that waits for either
@@ -81,6 +83,18 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Println("start debugging")
 		log.Println("DAP server pid = ", os.Getpid())
+
+		// Check project root should be absolute path
+		if !filepath.IsAbs(projectRootAbsPath) {
+			fmt.Fprintf(
+				os.Stderr,
+				"simulacron error: project root %s should be an absolute path",
+				projectRootAbsPath,
+			)
+			os.Exit(1)
+		}
+
+		// TODO: construct execution tape by loading file system stuffs.
 
 		// NOTE: the current implementation handles only one connection to
 		// a single editor: it won't make too much sense to support multiple
