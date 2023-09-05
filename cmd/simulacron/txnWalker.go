@@ -530,6 +530,11 @@ func (w *TransactionWalker) verifyBreakpoints(path string) (newlyVerifiedID util
 	return
 }
 
+/******************************************************************************
+ * The following section is the set of helper functions that walks txn walker *
+ * forward or backward against source lines of TEAL code.                     *
+ ******************************************************************************/
+
 // updateCurrentLine checks if walk reversely, then attempts to walk forward or
 // backward.
 func (w *TransactionWalker) updateCurrentLine(reverse bool) bool {
