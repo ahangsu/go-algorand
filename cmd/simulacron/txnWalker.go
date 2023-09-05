@@ -55,7 +55,7 @@ const (
 	ClearState
 )
 
-// ExecSegment represents a segment of execution trace inside of a single
+// ExecSegment represents a segment of execution trace inside a single
 // program bytecode.  The segment can be located with txnPath into the
 // transaction group, transaction trace type, program bytecode hash digest,
 // and the beginning pc index to the end of pc index.
@@ -239,7 +239,7 @@ type RuntimeBreakpoints map[crypto.Digest]util.Set[RuntimeBreakpoint]
 func MakeRuntimeBreakPoints() RuntimeBreakpoints { return make(RuntimeBreakpoints) }
 
 // BreakpointID is the global breakpoint ID that keep incrementing on new bps.
-var BreakpointID int = 1
+var BreakpointID = 1
 
 // allocBreakPointID alloc a new breakpoint ID and increment BreakpointID by 1.
 func allocBreakPointID() int {
@@ -256,7 +256,7 @@ func allocBreakPointID() int {
  ******************************************************************************/
 
 // TransactionWalker is the struct that points into ExecTape with SegmentIndex
-// and PCIndex, to represent the current execution progress inside of the
+// and PCIndex, to represent the current execution progress inside the
 // transaction group.  This struct additionally contains breakpoint locations
 // w.r.t. both source file and program bytecode.  Note that during debugging,
 // there would be only one instance of TransactionWalker throughout the
@@ -380,29 +380,32 @@ func (w *TransactionWalker) scratchVars() (scratchMap map[uint64]model.AvmValue)
 // Stack is a data structure used only for displaying TEAL stack computation.
 // The implementation is achieved through slice, while exporting the resulting
 // will reverse the slice to put the latest pushed element to the first place.
-type Stack[T any] []T
+type Stack[T any] struct {
+	s []T
+}
 
 // Push appends a new element to the slice.
-func (s Stack[T]) Push(t T) { s = append(s, t) }
+func (st Stack[T]) Push(t T) { st.s = append(st.s, t) }
 
 // Pop drops the last element from the slice.
-func (s Stack[T]) Pop() (r T) {
-	r, s = s[len(s)-1], s[:len(s)-1]
+func (st Stack[T]) Pop() (r T) {
+	r = st.s[len(st.s)-1]
+	st.s = st.s[:len(st.s)-1]
 	return
 }
 
 // PopN pops N elements from the stack.
-func (s Stack[T]) PopN(n uint64) {
+func (st Stack[T]) PopN(n uint64) {
 	for i := uint64(0); i < n; i++ {
-		s.Pop()
+		st.Pop()
 	}
 }
 
 // Export reverse the slice to put the latest pushed element to the first place.
-func (s Stack[T]) Export() (res []T) {
-	res = make([]T, len(s))
-	for i, si := range s {
-		res[len(s)-1-i] = si
+func (st Stack[T]) Export() (res []T) {
+	res = make([]T, len(st.s))
+	for i, si := range st.s {
+		res[len(st.s)-1-i] = si
 	}
 	return
 }
@@ -507,7 +510,7 @@ func (w *TransactionWalker) verifyBreakpoints(path string) (newlyVerifiedID util
 		}
 
 		newBp := bp
-		for true {
+		for {
 			if len(sourceAssets.Source[bp.SrcLine]) == 0 {
 				newBp.SrcLine++
 			}
@@ -547,7 +550,7 @@ func (w *TransactionWalker) continueTilSourceAvailable(reverse bool) {
 		return
 	}
 
-	for true {
+	for {
 		var stepResult bool
 		if reverse {
 			stepResult = w.Backward()
