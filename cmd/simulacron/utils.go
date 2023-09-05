@@ -47,15 +47,15 @@ type BidirectionalMap[K, V comparable] struct {
 	inverse map[V]K
 }
 
-// MakeBidirectionMap constructs an empty BidirectionalMap instance.
-func MakeBidirectionMap[K, V comparable]() BidirectionalMap[K, V] {
+// MakeBidirectionalMap constructs an empty BidirectionalMap instance.
+func MakeBidirectionalMap[K, V comparable]() BidirectionalMap[K, V] {
 	return BidirectionalMap[K, V]{
 		forward: make(map[K]V),
 		inverse: make(map[V]K),
 	}
 }
 
-// Add assigns a key-value pair in the bi-directional map instance.
+// Add assigns a key-value pair in the bidirectional map instance.
 func (bMap BidirectionalMap[K, V]) Add(k K, v V) {
 	bMap.forward[k] = v
 	bMap.inverse[v] = k
@@ -132,14 +132,13 @@ type TEALCodeAsset struct {
 }
 
 // readSourceLines reads a whole file and returns a slice of its lines.
-func readSourceLines(path string) ([]string, error) {
+func readSourceLines(path string) (lines []string, err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { err = file.Close() }()
 
-	var lines []string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
@@ -196,7 +195,7 @@ type DebugResources struct {
 func MakeDebugResources(
 	txnJsonPath, rootPath string) (resources DebugResources, err error) {
 
-	txnJsonPath = toAbsoluteFilePath(txnJsonPath, projectRootAbsPath)
+	txnJsonPath = toAbsoluteFilePath(txnJsonPath, rootPath)
 	fileBytes, err := os.ReadFile(txnJsonPath)
 	if err != nil {
 		return
@@ -208,7 +207,7 @@ func MakeDebugResources(
 	}
 
 	resources = DebugResources{
-		PathDigestBiMap: MakeBidirectionMap[string, crypto.Digest](),
+		PathDigestBiMap: MakeBidirectionalMap[string, crypto.Digest](),
 		DigestToSource:  make(map[crypto.Digest]TEALCodeAsset),
 	}
 
@@ -244,7 +243,7 @@ func MakeDebugResources(
 func ReadSimulateResponse(
 	respPath, rootPath string) (resp v2.PreEncodedSimulateResponse, err error) {
 
-	respPath = toAbsoluteFilePath(respPath, projectRootAbsPath)
+	respPath = toAbsoluteFilePath(respPath, rootPath)
 	simRespBytes, err := os.ReadFile(respPath)
 	if err != nil {
 		return
