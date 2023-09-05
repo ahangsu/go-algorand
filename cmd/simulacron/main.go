@@ -127,3 +127,51 @@ func main() {
 	}
 	os.Exit(0)
 }
+
+/*
+chat gpt says a synchronous server can be implemented this way
+
+   package main
+
+   import (
+    "fmt"
+    "net"
+    )
+
+   func main() {
+    // Create a network listener
+    listener, err := net.Listen("tcp", ":8080")
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+
+    // Accept incoming connections
+    for {
+        conn, err := listener.Accept()
+        if err != nil {
+            fmt.Println(err)
+            return
+        }
+
+        // Read and write data to the connection
+        for {
+            buf := make([]byte, 1024)
+            n, err := conn.Read(buf)
+            if err != nil {
+                fmt.Println(err)
+                return
+            }
+
+            fmt.Println(string(buf[:n]))
+
+            // Write data to the connection
+            _, err = conn.Write(buf[:n])
+            if err != nil {
+                fmt.Println(err)
+                return
+            }
+        }
+    }
+    }
+*/
