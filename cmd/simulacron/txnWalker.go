@@ -182,7 +182,7 @@ func (tape ExecTape) tapeForGroup(groupIndex uint64) (ExecTape, error) {
 // ExecTape is the struct that records all the debug assets that should be
 // read from the file system, including:
 //
-//   - BytecodeHashToSource, which is loaded from transaction group description
+//   - DebugResources, which is loaded from transaction group description
 //     file, describing the TEAL source(map)s tied to each hash of executed
 //     byte code.
 //
